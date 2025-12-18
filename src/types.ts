@@ -3,6 +3,7 @@ export type LogLevel = "debug" | "info" | "warn" | "error";
 export interface LoggerConfig {
     level?: LogLevel;
     service?: string;
+    filePath?: string;
 }
 
 export interface LogRecord {

@@ -8,9 +8,12 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "devDependencies": {
     "@types/node": "^25.0.3",
     "typescript": "^5.9.3"
-  }
+  },
+  "dependencies": {
+    "undici-types": "^7.16.0"
+  },
+  "description": ""
 }

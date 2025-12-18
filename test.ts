@@ -1,11 +1,8 @@
 import { Logger } from "./src";
 
 const logger = new Logger({
-    level: "warn",
-    service: "auth-api",
+  filePath: "logs/app.log",
 });
 
-logger.debug("This should Not log");
-logger.info("This should Not log");
-logger.warn("This SHOULD log ");
-logger.error("This ALSO logs", {code: 500});
+logger.info("file logging started");
+logger.error("this goes to console AND file");

@@ -1,4 +1,8 @@
 import { LoggerConfig, LogLevel, LogRecord } from "./types";
+import { FileTransport } from "./transports/file";
+
+
+
 
 const LEVEL_PRIORITY: Record<LogLevel, number> = {
     debug: 10,
@@ -11,9 +15,23 @@ export class Logger {
     private level: LogLevel;
     private service?: string;
 
-    constructor(config: LoggerConfig = {} ) {
-        this.level = config.level ?? "info";
-        this.service = config.service;
+
+    private fileTransport?: FileTransport;
+
+    constructor(config: LoggerConfig = {}) {
+        this.level =
+         config.level??
+         (process.env.LOG_LEVEL as LogLevel)??
+        "info";
+
+
+        this.service = 
+        config.service ??
+        process.env.LOG_SERVICE;
+
+        if (config.filePath) {
+          this.fileTransport = new FileTransport(config.filePath);
+        }
     }
 
     private shouldLog(level: LogLevel) {
@@ -31,6 +49,10 @@ export class Logger {
     };
 
     console.log(JSON.stringify(record));
+
+    if(this.fileTransport) {
+      this.fileTransport?.write(record)
+    }
   }
 
   info(msg: string, meta?: any) {
