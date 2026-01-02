@@ -1,26 +1,23 @@
 import fs from "fs";
 import path from "path";
-import { LogRecord } from "../types";
-
 export class FileTransport {
-    private filePath: string;
+  private filePath: string;
 
+  constructor(filePath: string) {
+    this.filePath = filePath;
 
-    constructor(filePath: string) {
-        this.filePath = filePath;
-
-
-        const dir = path.dirname(filePath);
-        if(!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true});
-
-        }
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
+  }
 
-
-
-write(record: LogRecord) {
-    const line = JSON.stringify(record) + "\n";
-    fs.appendFileSync(this.filePath, line, { encoding: "utf-8"});
-    }
+  write(line: string) {
+    const output = `${line}\n`;
+    fs.appendFile(this.filePath, output, { encoding: "utf-8" }, (err) => {
+      if (err) {
+        console.error("FileTransport write failed:", err);
+      }
+    });
+  }
 }

@@ -1,73 +1,109 @@
 import { LoggerConfig, LogLevel, LogRecord } from "./types";
 import { FileTransport } from "./transports/file";
 
-
-
-
 const LEVEL_PRIORITY: Record<LogLevel, number> = {
-    debug: 10,
-    info:20,
-    warn:30,
-    error:40,
+  debug: 10,
+  info: 20,
+  warn: 30,
+  error: 40,
 };
 
+const isLogLevel = (value: string | undefined): value is LogLevel =>
+  value === "debug" ||
+  value === "info" ||
+  value === "warn" ||
+  value === "error";
+
 export class Logger {
-    private level: LogLevel;
-    private service?: string;
+  private level: LogLevel;
+  private service?: string;
+  private fileTransport?: FileTransport;
 
+  constructor(config: LoggerConfig = {}) {
+    const envLevel = process.env.LOG_LEVEL;
+    const resolvedLevel = config.level ?? envLevel;
+    this.level = isLogLevel(resolvedLevel) ? resolvedLevel : "info";
 
-    private fileTransport?: FileTransport;
+    this.service = config.service ?? process.env.LOG_SERVICE;
 
-    constructor(config: LoggerConfig = {}) {
-        this.level =
-         config.level??
-         (process.env.LOG_LEVEL as LogLevel)??
-        "info";
+    if (config.filePath) {
+      this.fileTransport = new FileTransport(config.filePath);
+    }
+  }
 
+  private shouldLog(level: LogLevel) {
+    return LEVEL_PRIORITY[level] >= LEVEL_PRIORITY[this.level];
+  }
 
-        this.service = 
-        config.service ??
-        process.env.LOG_SERVICE;
+  private normalizeMeta(meta?: unknown): Record<string, unknown> | undefined {
+    if (meta === undefined) {
+      return undefined;
+    }
+    if (meta !== null && typeof meta === "object" && !Array.isArray(meta)) {
+      return meta as Record<string, unknown>;
+    }
+    return { value: meta };
+  }
 
-        if (config.filePath) {
-          this.fileTransport = new FileTransport(config.filePath);
+  private stringifyRecord(record: LogRecord): string {
+    const seen = new WeakSet<object>();
+    return JSON.stringify(record, (_key, value) => {
+      if (value !== null && typeof value === "object") {
+        if (seen.has(value)) {
+          return "[Circular]";
         }
+        seen.add(value);
+      }
+      return value;
+    });
+  }
+
+  log(level: LogLevel, message: string, meta?: unknown) {
+    if (!this.shouldLog(level)) {
+      return;
     }
 
-    private shouldLog(level: LogLevel) {
-        return LEVEL_PRIORITY[level] >= LEVEL_PRIORITY[this.level];   
-    }
-
-   
-
-  log(level: LogLevel, message: string, meta?: any) {
     const record: LogRecord = {
       level,
       message,
       timestamp: new Date().toISOString(),
-      meta,
+      service: this.service,
+      meta: this.normalizeMeta(meta),
     };
 
-    console.log(JSON.stringify(record));
+    const line = this.stringifyRecord(record);
+    switch (level) {
+      case "error":
+        console.error(line);
+        break;
+      case "warn":
+        console.warn(line);
+        break;
+      case "debug":
+        console.debug(line);
+        break;
+      default:
+        console.log(line);
+    }
 
-    if(this.fileTransport) {
-      this.fileTransport?.write(record)
+    if (this.fileTransport) {
+      this.fileTransport.write(line);
     }
   }
 
-  info(msg: string, meta?: any) {
+  info(msg: string, meta?: unknown) {
     this.log("info", msg, meta);
   }
 
-  error(msg: string, meta?: any) {
+  error(msg: string, meta?: unknown) {
     this.log("error", msg, meta);
   }
 
-  warn(msg: string, meta?: any) {
+  warn(msg: string, meta?: unknown) {
     this.log("warn", msg, meta);
   }
 
-  debug(msg: string, meta?: any) {
+  debug(msg: string, meta?: unknown) {
     this.log("debug", msg, meta);
   }
 }

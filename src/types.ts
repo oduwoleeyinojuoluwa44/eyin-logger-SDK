@@ -11,5 +11,5 @@ export interface LogRecord {
   message: string;
   timestamp: string;
   service?: string;
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown>;
 }
