@@ -13,6 +13,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "fuzzrunx": "^0.1.6",
     "undici-types": "^7.16.0"
   },
   "description": ""
