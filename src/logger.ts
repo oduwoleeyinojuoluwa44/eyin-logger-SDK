@@ -1,5 +1,7 @@
 import { LoggerConfig, LogLevel, LogRecord } from "./types";
+import { redactRecord, resolveRedaction, RedactionState } from "./redaction";
 import { FileTransport } from "./transports/file";
+import { ReliableHttpTransport } from "./transports/reliable-http";
 
 const LEVEL_PRIORITY: Record<LogLevel, number> = {
   debug: 10,
@@ -18,6 +20,8 @@ export class Logger {
   private level: LogLevel;
   private service?: string;
   private fileTransport?: FileTransport;
+  private remoteTransport?: ReliableHttpTransport;
+  private redactionState: RedactionState;
 
   constructor(config: LoggerConfig = {}) {
     const envLevel = process.env.LOG_LEVEL;
@@ -25,9 +29,17 @@ export class Logger {
     this.level = isLogLevel(resolvedLevel) ? resolvedLevel : "info";
 
     this.service = config.service ?? process.env.LOG_SERVICE;
+    this.redactionState = resolveRedaction(config.redaction);
 
     if (config.filePath) {
       this.fileTransport = new FileTransport(config.filePath);
+    }
+
+    if (config.remote?.url) {
+      this.remoteTransport = new ReliableHttpTransport(
+        config.remote,
+        config.queue
+      );
     }
   }
 
@@ -71,7 +83,8 @@ export class Logger {
       meta: this.normalizeMeta(meta),
     };
 
-    const line = this.stringifyRecord(record);
+    const outputRecord = redactRecord(record, this.redactionState);
+    const line = this.stringifyRecord(outputRecord);
     switch (level) {
       case "error":
         console.error(line);
@@ -89,6 +102,10 @@ export class Logger {
     if (this.fileTransport) {
       this.fileTransport.write(line);
     }
+
+    if (this.remoteTransport) {
+      this.remoteTransport.enqueue(line);
+    }
   }
 
   info(msg: string, meta?: unknown) {
@@ -105,5 +122,13 @@ export class Logger {
 
   debug(msg: string, meta?: unknown) {
     this.log("debug", msg, meta);
+  }
+
+  flush() {
+    return this.remoteTransport?.flush();
+  }
+
+  close() {
+    this.remoteTransport?.close();
   }
 }

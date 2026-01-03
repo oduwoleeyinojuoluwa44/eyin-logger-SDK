@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "outDir": "dist"
   },
-  "include": ["src", "test.ts"]
+  "include": ["src", "test.ts", "mock-server.ts"]
 }
